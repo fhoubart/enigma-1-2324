@@ -3,6 +3,7 @@
 # fonctions du packages sous la forme random.randint.
 # On aurai aussi pu faire "from random import randint" et appeler directement randint dans le code
 import random
+import math
 
 ########
 # Modélisation du jeu
@@ -90,8 +91,12 @@ def avancer(plateau, joueurs, joueurQuiJoue, nbCases):
     nouvellePosition = positionJoueur + nbCases
 
     # Si le joueur dépasse la fin du plateau, il revient sur ses pas
-    if nouvellePosition > len(plateau):
+    if nouvellePosition >= len(plateau):
         nouvellePosition = len(plateau)-1 - (nbCases - (len(plateau)-1-positionJoueur))
+
+    # Si le joueur se retrouve avant le début, on le remet sur la première case
+    if nouvellePosition < 0:
+        nouvellePosition = 0
 
     joueurs[joueurQuiJoue] = nouvellePosition
 
@@ -122,7 +127,8 @@ def partieTermine(plateau,joueurs):
     :return: True si la partie est terminée, False sinon
     """
     for i in range(len(joueurs)):
-        if joueurs[i] >= len(plateau)-1:
+        # On vérifie si le joueur est sur une case de type 3
+        if plateau[joueurs[i]] == 3:
             return True
     # Si on arrive ici, aucun joueur n'a gagné
     return False
@@ -135,7 +141,7 @@ def quiAGagne(plateau, joueurs):
     :return: -1 si aucun joueur n'a gagné, l'index du joueur qui a gagné si l'un deux à gagné
     """
     for i in range(len(joueurs)):
-        if joueurs[i] >= len(plateau)-1:
+        if plateau[joueurs[i]] == 3:
             return i
     # Si on arrive ici, aucun joueur n'a gagné
     return -1
@@ -199,9 +205,138 @@ def afficherPlateau(plateau,joueurs):
     print("+")
 
 
-########
+def afficherPlateauCarre(plateau,joueur,nbCasesParLignes):
+    """
+    Cette fonction affiche le plateau en carré en parcourant du bas en haut, de gauche à droite puis au dessus de
+    droite à gauche et ainsi de suite
+                +---+---+
+                | 16| 15|
+    +---+---+---+---+---+
+    | 10| 11| 12| 13| 14|
+    +---+---+---+---+---+
+    | 9 | 8 | 7 | 6 | 5 |
+    +---+---+---+---+---+
+    | 0 | 1 | 2 | 3 | 4 |
+    +---+---+---+---+---+
+    La complexité réside dans le parcours en zigzag, et l'affichage de la première ligne qui n'est pas forcement
+    complète.
+    Le plateau étant stocké dans un tableau simple, il suffit pour chaque case de calculer les coordonnées dans le
+    tableau plateau qui correspond. En sachant qu'on parcours du haut en bas (donc avec un numéro de ligne décroissant)
+    et de gauche à droite (donc un numéro de colonne croissant). Le numéro de ligne modulo 2 donne si il faut compter
+    en incrémentant ou en décrémentant.
+
+    Pour la première ligne, il faut tester le numéro de la case pour savoir si on affiche une case ou un blanc.
+
+    :param plateau: Le plateau de jeu
+    :param joueur: Le tableau de joueurs qui contient leurs positions sur le plateau
+    :return: rien
+    """
+
+    # Calcul du nombre de lignes nécessaire à l'affichage du plateau
+    nbLignesNecessaires = math.ceil(len(plateau)/nbCasesParLignes)
+
+    # On compte en décroissant, du nombre de lignes nécessaires à 0
+    for ligneCourante in range(nbLignesNecessaires-1,-1,-1):
+
+        # AFfichage de la première ligne de +----
+        for rangeeCourante in range(nbCasesParLignes):
+
+            # Caclul du numéro de la case dans plateau correspondant
+            if ligneCourante % 2 == 0:
+                # On va de gauche à droite
+                case = ligneCourante*nbLignesNecessaires+rangeeCourante
+            else:
+                # On va de droite à gauche
+                case = (ligneCourante+1)*(nbCasesParLignes)-1-rangeeCourante
+
+            # On affiche des blancs et pas une case si on est en dehors du plateau
+            if case == len(plateau):
+                if ligneCourante % 2 == 0:
+                    print("+   ",end="") # Caractère de fin de la case précédente (on va de gauche à droite)
+                else:
+                    print("    ",end="") # On va de droite à gauche => rien à gauche
+            elif case > len(plateau):
+                print("    ",end="")
+            else:
+                print("+---", end="")
+
+        # A la fin de la boucle, on affiche le dernier caractère, qui peut être un blanc si on est en dehors du plateau
+        if case < len(plateau):
+            print("+")
+        else:
+            print("")
+
+        # Affiche des cases
+        for rangeeCourante in range(nbCasesParLignes):
+            # La variable case contient les coordonnées dans le plateau
+            if ligneCourante % 2 == 0:
+                # On va de gauche à droite
+                case = ligneCourante*nbLignesNecessaires+rangeeCourante
+            else:
+                # On va de droite à gauche
+                case = (ligneCourante+1)*(nbCasesParLignes)-1-rangeeCourante
+
+            # Si on est en dehors du plateau, on n'affiche rien
+            if case == len(plateau):
+                if ligneCourante % 2 == 0:
+                    print("|   ", end="")  # Caractère de fin de la case précédente (on va de gauche à droite)
+                else:
+                    print("    ", end="")  # On va de droite à gauche => rien à gauche
+            elif case > len(plateau):
+                print("    ",end="")
+            else:
+                # Vérification de la présence d'un joueur sur la case => on affiche le numéro du joueur
+                indexJoueurSurLaCase = indexJoueurSurUneCase(joueurs, case)
+                if indexJoueurSurLaCase >= 0:
+                    # Il y a quelqu'un sur la case, on l'affiche
+                    print("| " + str(indexJoueurSurLaCase + 1) + " ", end="")
+                else:
+                    # Pas de joueur sur la case, on affiche le type de case
+                    if plateau[case] == 0:
+                        print("|   ", end="")
+                    elif plateau[case] == 1:
+                        print("| O ", end="")
+                    elif plateau[case] == 2:
+                        print("| ! ", end="")
+                    elif plateau[case] == 3:
+                        print("| V ", end="")
+
+        # Affichage de la barre en fin de ligne, qui peut être blanche si on est en dehors du plateau
+        if case < len(plateau):
+            print("|")
+        else:
+            print("")
+
+    # AFfichage de la dernière ligne de +----, avec les mêmes tests que la première (cas où il n'y a qu'une ligne
+    # non complète
+    for rangeeCourante in range(nbCasesParLignes):
+
+        # Caclul du numéro de la case dans plateau correspondant
+        if ligneCourante % 2 == 0:
+            # On va de gauche à droite
+            case = ligneCourante * nbLignesNecessaires + rangeeCourante
+        else:
+            # On va de droite à gauche
+            case = (ligneCourante + 1) * (nbCasesParLignes) - 1 - rangeeCourante
+
+        # On affiche des blancs et pas une case si on est en dehors du plateau
+        if case == len(plateau):
+            print("+   ", end="")
+        elif case > len(plateau):
+            print("    ", end="")
+        else:
+            print("+---", end="")
+
+    # A la fin de la boucle, on affiche le dernier caractère, qui peut être un blanc si on est en dehors du plateau
+    if case < len(plateau):
+        print("+")
+    else:
+        print("")
+
+
+##################
 # programme main
-########
+##################
 
 nbCases = int(input("Combien de cases sur le plateau ? "))
 nbJoueurs = int(input("Combien de joueurs ? "))
@@ -211,18 +346,25 @@ joueurs = initialiserJoueurs(nbJoueurs)
 
 joueurCourant = 0
 
-while not partieTermine(plateau,joueurs) == -1:
+while not partieTermine(plateau,joueurs):
     print("###########################")
-    print(f"##   Tour du joueur {joueurCourant}")
+    print(f"##   Tour du joueur {joueurCourant+1}")
     print("###########################")
-    afficherPlateau(plateau,joueurs)
+
+    afficherPlateauCarre(plateau,joueurs,5)
+
     print()
+
     resultatLancerDe = lancerDeuxDe()
+
     print(f"Le joueur {joueurCourant+1} a fait {resultatLancerDe}")
     input("Appuyer sur entrée pour continuer")
+
     avancer(plateau, joueurs, joueurCourant, resultatLancerDe)
     afficherPlateau(plateau,joueurs)
+
     input("Appuyer sur entrée pour passer au joueur suivant")
+
     joueurCourant = (joueurCourant + 1)%nbJoueurs
 
 # Lorsqu'on sort de la boucle, la partie est terminée
